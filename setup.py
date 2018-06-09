@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 from setuptools import find_packages
 from setuptools import setup
+from setuptools import Extension
 
+
+module1 = Extension('lrus', sources = ['guillotina_rediscache/lru.c'])
 
 setup(
     name='guillotina_rediscache',
@@ -28,7 +31,7 @@ setup(
     ],
     zip_safe=True,
     include_package_data=True,
-    # ext_modules=ext_modules,
+    ext_modules=[module1],
     packages=find_packages(),
     install_requires=[
         'guillotina>=2.3.10',
