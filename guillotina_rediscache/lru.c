@@ -1,5 +1,6 @@
 #include <Python.h>
 #include <stdint.h>
+#include <sys/time.h>
 
 /*
  * This is a simple implementation of LRU Dict that uses a Python dict and an associated doubly linked
@@ -129,6 +130,7 @@ typedef struct {
     Py_ssize_t memory;
     Py_ssize_t size;
     Py_ssize_t hits;
+    Py_ssize_t clean;
     Py_ssize_t misses;
     PyObject *callback;
 } LRU;
@@ -296,6 +298,27 @@ LRU_get(LRU *self, PyObject *args)
     return instead;
 }
 
+long long timeInMilliseconds(void) {
+    struct timeval tv;
+
+    gettimeofday(&tv,NULL);
+    return (((long long)tv.tv_sec)*1000)+(tv.tv_usec/1000);
+}
+
+void lru_vacuum(LRU *self, long umbral, int ms) {
+    // vacuuum
+    long long start = timeInMilliseconds();
+    while(self->memory > (self->size - umbral)) {
+        self->memory -= self->last->size;
+        lru_delete_last(self);
+        self->memory -= self->last->size;
+        lru_delete_last(self);
+        self->memory -= self->last->size;
+        lru_delete_last(self);
+        self->clean += 1;
+        if (timeInMilliseconds()-start > ms) break;
+    }
+}
 
 static int
 lru_ass_sub(LRU *self, PyObject *key, PyObject *value, Py_ssize_t memory)
@@ -326,13 +349,11 @@ lru_ass_sub(LRU *self, PyObject *key, PyObject *value, Py_ssize_t memory)
             Py_INCREF(value);
 
             res = PUT_NODE(self->dict, key, node);
-            while(self->memory > self->size) {
-                self->memory -= self->last->size;
-                lru_delete_last(self);
-            }
             lru_add_node_at_head(self, node);
-
         }
+
+        lru_vacuum(self, 50*1024*1024, 100);
+
     } else {
         res = PUT_NODE(self->dict, key, NULL);
         if (res == 0) {
@@ -529,7 +550,7 @@ LRU_get_size(LRU *self)
 static PyObject *
 LRU_get_stats(LRU *self)
 {
-    return Py_BuildValue("nn", self->hits, self->misses);
+    return Py_BuildValue("nnn", self->hits, self->misses, self->clean);
 }
 
 
@@ -617,6 +638,7 @@ LRU_init(LRU *self, PyObject *args, PyObject *kwds)
     self->hits = 0;
     self->misses = 0;
     self->memory = 0;
+    self->clean = 0;
     return 0;
 }
 

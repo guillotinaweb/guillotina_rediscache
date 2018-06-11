@@ -5,9 +5,10 @@ import gc
 
 from lru import LRU
 from lrus import LRU as LRUS
+from guillotina_rediscache.lrusize import LRUS as LRUB
 import resource
 
-_passes = 100000
+_passes = 10000
 
 
 def rbytes(size=1):
@@ -18,7 +19,7 @@ def gen_data(serie):
     return [rbytes(k) for k in serie]
 
 
-def action(passes, writ=0.4):
+def action(passes, writ=0.1):
     ACTION = []
     for k in range(passes):
         if random.random() > writ:
@@ -32,12 +33,15 @@ def run_cache(cache, serie):
     for i in range(3):
         for step in serie:
             if step[0] == "w":
-                cache[step[1]] = step[2]
+                if isinstance(cache, LRU):
+                    cache[step[1]] = step[2]
+                else:
+                    cache.set(step[1], step[2], len(step[2]))
             else:
                 cache.get(step[1], None)
 
 
-def create_serie(items, actions, mkeys=5000, passes=100000):
+def create_serie(items, actions, mkeys=3000, passes=10000):
     serie = []
     for k in range(passes):
         key = str(random.randrange(0, mkeys))
@@ -111,13 +115,30 @@ def test_bench_with_lrus(benchmark, data, collector):
     benchmark.pedantic(run_cache, args=(c2, serie),
                        iterations=1, rounds=100)
     assert c2.get_memory() <= (300*M)
-    hits, misses = c2.get_stats()
+    hits, misses, clean = c2.get_stats()
     collector(dict(
         hits=hits,
         misses=misses,
+        clean=clean,
         items=len(c2.keys()),
         memory=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss-m
     ))
+
+
+def test_bench_with_cython(benchmark, data, collector):
+    m = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    c2 = LRUB(300*M)
+    benchmark.pedantic(run_cache, args=(c2, serie),
+                       iterations=1, rounds=100)
+    assert c2.memory <= (300*M)
+    hits, misses, items = c2.get_stats()
+    collector(dict(
+        hits=hits,
+        misses=misses,
+        items=items,
+        memory=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss-m
+    ))
+
 
 
 def test_bench_with_original(benchmark, data, collector):
