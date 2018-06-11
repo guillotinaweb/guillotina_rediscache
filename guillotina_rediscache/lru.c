@@ -320,9 +320,14 @@ void lru_vacuum(LRU *self, long umbral, int ms) {
     }
 }
 
+
 static int
-lru_ass_sub(LRU *self, PyObject *key, PyObject *value, Py_ssize_t memory)
+_lru_ass_sub(LRU *self, PyObject *key, PyObject *value, Py_ssize_t memory)
 {
+    if (!memory) {
+        memory = 0;
+    }
+
     int res = 0;
     Node *node = GET_NODE(self->dict, key);
     PyErr_Clear();  /* GET_NODE sets an exception on miss. Shut it up. */
@@ -368,6 +373,12 @@ lru_ass_sub(LRU *self, PyObject *key, PyObject *value, Py_ssize_t memory)
     return res;
 }
 
+
+static int lru_ass_sub(LRU *self, PyObject *key, PyObject *value)
+{
+    return _lru_ass_sub(self, key, value, 0);
+}
+
 static PyObject *
 LRU_set(LRU *self, PyObject *args) {
 
@@ -376,7 +387,7 @@ LRU_set(LRU *self, PyObject *args) {
 
     if (!PyArg_ParseTuple(args, "OOl", &key, &value, &mem))
             return NULL;
-    lru_ass_sub(self, key, value, mem);
+    _lru_ass_sub(self, key, value, mem);
     Py_RETURN_NONE;
 }
 
@@ -423,13 +434,13 @@ LRU_update(LRU *self, PyObject *args, PyObject *kwargs)
 	if ((PyArg_ParseTuple(args, "|O", &arg))) {
 		if (arg && PyDict_Check(arg)) {
 			while (PyDict_Next(arg, &pos, &key, &value))
-				lru_ass_sub(self, key, value, 0);
+				_lru_ass_sub(self, key, value, 0);
 		}
 	}
 
 	if (kwargs != NULL && PyDict_Check(kwargs)) {
 		while (PyDict_Next(kwargs, &pos, &key, &value))
-			lru_ass_sub(self, key, value, 0);
+			_lru_ass_sub(self, key, value, 0);
 	}
 
 	Py_RETURN_NONE;

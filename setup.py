@@ -6,8 +6,8 @@ from Cython.Build import cythonize
 
 
 module1 = Extension('lrus', sources = ['guillotina_rediscache/lru.c'])
-# module2 = cythonize("guillotina_rediscache/lrusize.pyx")
-module2 = []
+module2 = cythonize("guillotina_rediscache/lrusize.pyx")
+# module2 = []
 
 setup(
     name='guillotina_rediscache',
