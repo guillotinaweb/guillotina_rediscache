@@ -12,7 +12,8 @@ def test_lrusized_acts_like_a_dict():
     m = LRU(1024)
     m.set('a', _bytes, 3)
     assert m['a'] == _bytes
-    assert 'a' in m.keys()
+    assert 'a' in m
+    assert m.get('a') == _bytes
     assert m.get_memory() == 3
     del m['a']
     assert len(m.keys()) == 0
@@ -42,3 +43,31 @@ def test_clean_till_it_has_enought_space():
 
     # we should cleanup 12 keys
     assert m.get_stats() == (1, 0, 12)
+
+
+def test_setting_a_bigger_value_than_cache_doesnt_brake():
+    m = LRU(1)
+    m.set('a', 'v', 100)
+    assert 'a' not in m.keys()
+
+
+def test_cache_stats_are_hit():
+    m = LRU(1)
+    try:
+        b = m['a']
+    except KeyError:
+        pass
+    assert m.get_stats() == (0, 1, 0)
+
+    m.set('a', 1, 1)
+    assert m['a'] is 1
+    assert m.get_stats() == (1, 1, 0)
+
+
+def test_cache_clear_resets_memory():
+    m = LRU(2)
+    m.set('a', 1, 1)
+    assert m.get_memory() == 1
+    m.clear()
+    assert m.get_memory() == 0
+    assert 'a' not in m.keys()

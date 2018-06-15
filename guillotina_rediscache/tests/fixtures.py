@@ -14,7 +14,7 @@ def settings_configurator(settings):
         'host': getattr(redis_container, 'host', 'localhost'),
         'port': getattr(redis_container, 'port', 6379),
         'ttl': 3600,
-        'memory_cache_size': 1000,
+        'memory_cache_size': 200 * 1024 * 1024,
         'updates_channel': 'guillotina',
         'pool': {
             'minsize': 5,

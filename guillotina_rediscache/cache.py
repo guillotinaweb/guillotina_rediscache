@@ -1,5 +1,5 @@
 from guillotina import app_settings
-from lru import LRU
+from guillotina_rediscache.lru import LRU
 
 import aioredis
 

@@ -68,7 +68,9 @@ class RedisCache(BaseCache):
         key = self.get_key(**kwargs)
         try:
             conn = await self.get_redis()
-            self._memory_cache[key] = value
+
+            size = len(value['state']) if isinstance(value, dict) else 0
+            self._memory_cache.set(key, value, size)
             await conn.set(CACHE_PREFIX + key, serialize.dumps(value),
                            expire=self._settings.get('ttl', 3600))
             logger.info('set {} in cache'.format(key))
