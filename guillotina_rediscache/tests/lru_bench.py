@@ -4,8 +4,7 @@ import pytest
 import gc
 
 from lru import LRU
-from lrus import LRU as LRUS
-from guillotina_rediscache.lrusize import LRUS as LRUB
+from guillotina_rediscache.lru import LRU as LRUS
 import resource
 
 _passes = 10000
@@ -65,13 +64,10 @@ P5 = [64]
 P6 = [10*M, 64]
 
 
-serie = create_serie(gen_data(P4), action(_passes))
-
-
-@pytest.fixture(scope="module", params=[P1])
+# serie = create_serie(gen_data(P4), action(_passes))
+@pytest.fixture(scope="session", params=[P0, P1, P2, P3, P4, P5, P6])
 def data(request):
-    d = gen_data(request.param)
-    return d
+    return create_serie(gen_data(request.param), action(_passes))
 
 
 results = {}
@@ -109,10 +105,10 @@ def collector(request, reporter):
     yield data
 
 
-def test_bench_with_lrus(benchmark, data, collector):
+def test_bench_with_lru(benchmark, data, collector):
     m = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     c2 = LRUS(300*M)
-    benchmark.pedantic(run_cache, args=(c2, serie),
+    benchmark.pedantic(run_cache, args=(c2, data),
                        iterations=1, rounds=100)
     assert c2.get_memory() <= (300*M)
     hits, misses, clean = c2.get_stats()
@@ -125,26 +121,10 @@ def test_bench_with_lrus(benchmark, data, collector):
     ))
 
 
-def test_bench_with_cython(benchmark, data, collector):
-    m = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-    c2 = LRUB(300*M)
-    benchmark.pedantic(run_cache, args=(c2, serie),
-                       iterations=1, rounds=100)
-    assert c2.memory <= (300*M)
-    hits, misses, items = c2.get_stats()
-    collector(dict(
-        hits=hits,
-        misses=misses,
-        items=items,
-        memory=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss-m
-    ))
-
-
-
 def test_bench_with_original(benchmark, data, collector):
     m = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     c1 = LRU(2000)
-    benchmark.pedantic(run_cache, args=(c1, serie),
+    benchmark.pedantic(run_cache, args=(c1, data),
                        iterations=1, rounds=100)
     hits, misses = c1.get_stats()
     items = len(c1.keys())

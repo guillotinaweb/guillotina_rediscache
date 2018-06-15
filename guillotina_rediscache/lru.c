@@ -3,6 +3,16 @@
 #include <sys/time.h>
 
 /*
+ * This package is based on a fork of https://github.com/amitdev/lru-dict
+ * We added the feature of tracking object sizes from python, without calculating
+ * them. To use this feature, instead os relaying on the dict syntax,
+ * you must explicity set the values, with the new provided method:
+ * for eg:
+ *
+ * l = LRU(200*1024*1024)
+ * l.set('key', 'val', 3)
+ *
+ *
  * This is a simple implementation of LRU Dict that uses a Python dict and an associated doubly linked
  * list to keep track of recently inserted/accessed items.
  *
@@ -60,7 +70,7 @@ typedef struct _Node {
     PyObject_HEAD
     PyObject * value;
     PyObject * key;
-    Py_ssize_t size;
+    Py_ssize_t size;   /* This tracks the current object size */
     struct _Node * prev;
     struct _Node * next;
 } Node;
@@ -127,7 +137,7 @@ typedef struct {
     PyObject * dict;
     Node * first;
     Node * last;
-    Py_ssize_t memory;
+    Py_ssize_t memory;  /* tracks the current memory used */
     Py_ssize_t size;
     Py_ssize_t hits;
     Py_ssize_t clean;
@@ -298,25 +308,13 @@ LRU_get(LRU *self, PyObject *args)
     return instead;
 }
 
-long long timeInMilliseconds(void) {
-    struct timeval tv;
 
-    gettimeofday(&tv,NULL);
-    return (((long long)tv.tv_sec)*1000)+(tv.tv_usec/1000);
-}
-
-void lru_vacuum(LRU *self, long umbral, int ms) {
+void lru_vacuum(LRU *self) {
     // vacuuum
-    long long start = timeInMilliseconds();
-    while(self->memory > (self->size - umbral)) {
-        self->memory -= self->last->size;
-        lru_delete_last(self);
-        self->memory -= self->last->size;
-        lru_delete_last(self);
+    while(self->memory > self->size) {
         self->memory -= self->last->size;
         lru_delete_last(self);
         self->clean += 1;
-        if (timeInMilliseconds()-start > ms) break;
     }
 }
 
@@ -324,11 +322,13 @@ void lru_vacuum(LRU *self, long umbral, int ms) {
 static int
 _lru_ass_sub(LRU *self, PyObject *key, PyObject *value, Py_ssize_t memory)
 {
-    if (!memory) {
-        memory = 0;
-    }
 
     int res = 0;
+    /* do nothing if provided val is greater in size than the desired cache */
+    if (memory > self->size) {
+        return res;
+    }
+
     Node *node = GET_NODE(self->dict, key);
     PyErr_Clear();  /* GET_NODE sets an exception on miss. Shut it up. */
     if (value) {
@@ -357,7 +357,7 @@ _lru_ass_sub(LRU *self, PyObject *key, PyObject *value, Py_ssize_t memory)
             lru_add_node_at_head(self, node);
         }
 
-        lru_vacuum(self, 50*1024*1024, 100);
+        lru_vacuum(self);
 
     } else {
         res = PUT_NODE(self->dict, key, NULL);
@@ -376,6 +376,8 @@ _lru_ass_sub(LRU *self, PyObject *key, PyObject *value, Py_ssize_t memory)
 
 static int lru_ass_sub(LRU *self, PyObject *key, PyObject *value)
 {
+    /* If we are using the dict syntax l['a'] we can track size of values
+       and we track them as 0 */
     return _lru_ass_sub(self, key, value, 0);
 }
 
@@ -723,7 +725,7 @@ static PyTypeObject LRUType = {
 #if PY_MAJOR_VERSION >= 3
   static struct PyModuleDef moduledef = {
     PyModuleDef_HEAD_INIT,
-    "lrus",            /* m_name */
+    "lru",            /* m_name */
     lru_doc,          /* m_doc */
     -1,               /* m_size */
     NULL,             /* m_methods */
@@ -771,7 +773,7 @@ moduleinit(void)
     }
 #else
     PyMODINIT_FUNC
-    PyInit_lrus(void)
+    PyInit_lru(void)
     {
         return moduleinit();
     }

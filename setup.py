@@ -2,12 +2,12 @@
 from setuptools import find_packages
 from setuptools import setup
 from setuptools import Extension
-from Cython.Build import cythonize
 
 
-module1 = Extension('lrus', sources = ['guillotina_rediscache/lru.c'])
-module2 = cythonize("guillotina_rediscache/lrusize.pyx")
-# module2 = []
+module1 = Extension(
+    'guillotina_rediscache.lru',
+    sources=['guillotina_rediscache/lru.c']
+)
 
 setup(
     name='guillotina_rediscache',
@@ -34,17 +34,18 @@ setup(
     ],
     zip_safe=True,
     include_package_data=True,
-    ext_modules=[module1] + module2,
+    ext_modules=[module1],
     packages=find_packages(),
     install_requires=[
         'guillotina>=2.3.10',
         'aioredis>=1.0.0',
-        'lru-dict',
         'ujson'
     ],
     extras_require={
         'test': [
             'pytest',
+            'pytest-benchmark',
+            'lru-dict',
             'docker',
             'backoff',
             'pytest-asyncio<=0.5.0',

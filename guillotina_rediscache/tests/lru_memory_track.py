@@ -5,9 +5,9 @@ import gc
 import time
 import resource
 
-from lrus import LRU as LRUS
+from guillotina_rediscache.lru import LRU
 
-
+on
 _passes = 10000
 
 
@@ -63,7 +63,7 @@ def get_memory():
 
 if __name__ == "__main__":
     serie = create_serie(gen_data(P4), action(_passes))
-    c = LRUS(300*M)
+    c = LRU(300*M)
     pase = 1
     while True:
         run_cache(c, serie)
