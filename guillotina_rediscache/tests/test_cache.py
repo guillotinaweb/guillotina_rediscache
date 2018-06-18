@@ -153,3 +153,21 @@ async def test_subscriber_ignores_trsn_on_invalidate(
     assert 5555 not in utility._ignored_tids
 
     await cache.close_redis_pool()
+
+
+async def test_get_size_of_item(dummy_guillotina, loop):
+    await cache.close_redis_pool()
+    trns = mocks.MockTransaction(mocks.MockTransactionManager())
+    trns.added = trns.deleted = {}
+    rcache = RedisCache(trns)
+    from guillotina_rediscache.cache_strategy import _default_size
+    import sys
+    assert rcache.get_size(dict(a=1)) == _default_size
+    assert rcache.get_size(1) == sys.getsizeof(1)
+    assert rcache.get_size(dict(state=b'x'*10)) == 10
+
+    item = [
+        'x'*10, 'x'*10, 'x'*10
+    ]
+
+    assert rcache.get_size(item) == sys.getsizeof('x'*10) * 3

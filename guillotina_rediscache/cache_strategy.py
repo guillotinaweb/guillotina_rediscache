@@ -9,6 +9,7 @@ from guillotina_rediscache import cache
 from guillotina_rediscache import serialize
 from guillotina_rediscache.interfaces import CACHE_PREFIX
 from guillotina_rediscache.interfaces import IRedisChannelUtility
+from sys import getsizeof
 
 import aioredis
 import asyncio
@@ -16,6 +17,9 @@ import logging
 
 
 logger = logging.getLogger('guillotina_rediscache')
+
+_default_size = 1024
+_basic_types = (bytes, str, int, float)
 
 
 @configure.adapter(for_=ITransaction, provides=IStorageCache,
@@ -69,13 +73,25 @@ class RedisCache(BaseCache):
         try:
             conn = await self.get_redis()
 
-            size = len(value['state']) if isinstance(value, dict) else 0
+            size = self.get_size(value)
             self._memory_cache.set(key, value, size)
             await conn.set(CACHE_PREFIX + key, serialize.dumps(value),
                            expire=self._settings.get('ttl', 3600))
             logger.info('set {} in cache'.format(key))
         except Exception:
             logger.warning('Error setting cache value', exc_info=True)
+
+    def get_size(self, value):
+        if isinstance(value, dict):
+            if 'state' in value:
+                return len(value['state'])
+        if isinstance(value, list) and len(value) > 0:
+            # if its a list, guesss from first gey the length, and
+            # estimate it from the total lenghts on the list..
+            return getsizeof(value[0]) * len(value)
+        if type(value) in _basic_types:
+            return getsizeof(value)
+        return _default_size
 
     @profilable
     async def clear(self):
