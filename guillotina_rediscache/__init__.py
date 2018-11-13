@@ -13,6 +13,13 @@ app_settings = {
             'maxsize': 100
         },
         'cluster_mode': False
+    },
+    "load_utilities": {
+        "guillotina_rediscache.cache": {
+            'provides': 'guillotina_rediscache.interfaces.IRedisChannelUtility',  # noqa
+            'factory': 'guillotina_rediscache.utility.RedisChannelUtility',
+            'settings': {}
+        }
     }
 }
 

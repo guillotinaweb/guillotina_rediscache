@@ -21,6 +21,11 @@ def settings_configurator(settings):
             'maxsize': 100
         }
     }
+    settings["load_utilities"]["guillotina_rediscache.cache"] = {
+        "provides": "guillotina_rediscache.interfaces.IRedisChannelUtility",  # noqa
+        "factory": "guillotina_rediscache.utility.RedisChannelUtility",
+        "settings": {}
+    }
 
 
 testing.configure_with(settings_configurator)
