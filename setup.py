@@ -48,7 +48,7 @@ setup(
             'lru-dict',
             'docker',
             'backoff',
-            'pytest-asyncio<=0.5.0',
+            'pytest-asyncio',
             'pytest-aiohttp',
             'pytest-cov',
             'pytest-docker-fixtures>=1.1.0'
