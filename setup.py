@@ -37,7 +37,7 @@ setup(
     ext_modules=[module1],
     packages=find_packages(),
     install_requires=[
-        'guillotina>=2.3.10',
+        'guillotina>=4.3.0',
         'aioredis>=1.0.0',
         'ujson'
     ],
