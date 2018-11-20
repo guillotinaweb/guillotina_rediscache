@@ -1,8 +1,8 @@
-2.0.4 (unreleased)
+2.1.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
-
+- Upgrade to Guillotina >= 4.3
+  [bloodbare]
 
 2.0.3 (2018-07-20)
 ------------------
