@@ -4,6 +4,13 @@
 - Upgrade to Guillotina >= 4.3
   [bloodbare]
 
+2.0.4 (2018-10-06)
+------------------
+
+- Do not fail memory cache if not configured
+  [vangheem]
+
+
 2.0.3 (2018-07-20)
 ------------------
 
