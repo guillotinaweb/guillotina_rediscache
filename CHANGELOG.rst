@@ -1,7 +1,8 @@
 2.1.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix endpoint @redis-clear-cache
+  [masipcat]
 
 
 2.1.0 (2018-11-20)

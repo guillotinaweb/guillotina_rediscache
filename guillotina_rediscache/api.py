@@ -26,10 +26,8 @@ async def stats(context, request):
 async def clear(context, request):
     memory_cache = cache.get_memory_cache()
     memory_cache.clear()
-    pool = await cache.get_redis_pool()
-    conn = await pool.acquire()
-    await conn.flushall()
-    pool.release(conn)
+    redis = aioredis.Redis(await cache.get_redis_pool())
+    await redis.flushall()
     return {
         'success': True
     }
