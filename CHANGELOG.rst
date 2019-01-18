@@ -1,6 +1,10 @@
 2.1.1 (unreleased)
 ------------------
 
+- When applying invalidations, make sure to not allow another
+  starting transaction to conflict with asyncio invalidation task
+  [vangheem]
+
 - Fix endpoint @redis-clear-cache
   [masipcat]
 

@@ -125,7 +125,8 @@ class RedisCache(BaseCache):
                     await conn.delete(*delete_keys)
                 logger.info('Deleted cache keys {}'.format(delete_keys))
             except Exception:
-                logger.warning('Error deleting cache keys {}'.format(delete_keys), exc_info=True)
+                logger.warning('Error deleting cache keys {}'.format(
+                    delete_keys), exc_info=True)
 
     async def store_object(self, obj, pickled):
         if len(self._stored_objects) < self.max_publish_objects:
@@ -160,17 +161,21 @@ class RedisCache(BaseCache):
                 ])
 
             if len(self._keys_to_publish) > 0:
-                asyncio.ensure_future(self._synchronize())
+                asyncio.ensure_future(self._synchronize(
+                    self._stored_objects, self._keys_to_publish,
+                    self._transaction._tid))
+            self._keys_to_publish = []
+            self._stored_objects = []
         except Exception:
             logger.warning('Error closing connection', exc_info=True)
 
     @profilable
-    async def _synchronize(self):
+    async def _synchronize(self, stored_objects, keys_to_publish, tid):
         '''
         publish cache changes on redis
         '''
         push = {}
-        for obj, pickled in self._stored_objects:
+        for obj, pickled in stored_objects:
             val = {
                 'state': pickled,
                 'zoid': obj._p_oid,
@@ -178,23 +183,25 @@ class RedisCache(BaseCache):
                 'id': obj.__name__
             }
             if obj.__of__:
-                ob_key = self.get_key(oid=obj.__of__, id=obj.__name__, variant='annotation')
-                await self.set(val, oid=obj.__of__, id=obj.__name__, variant='annotation')
+                ob_key = self.get_key(
+                    oid=obj.__of__, id=obj.__name__, variant='annotation')
+                await self.set(
+                    val, oid=obj.__of__, id=obj.__name__, variant='annotation')
             else:
-                ob_key = self.get_key(container=obj.__parent__, id=obj.__name__)
-                await self.set(val, container=obj.__parent__, id=obj.__name__)
+                ob_key = self.get_key(
+                    container=obj.__parent__, id=obj.__name__)
+                await self.set(
+                    val, container=obj.__parent__, id=obj.__name__)
 
-            if ob_key in self._keys_to_publish:
-                self._keys_to_publish.remove(ob_key)
+            if ob_key in keys_to_publish:
+                keys_to_publish.remove(ob_key)
             push[ob_key] = val
 
         channel_utility = getUtility(IRedisChannelUtility)
-        channel_utility.ignore_tid(self._transaction._tid)
-        await self._redis.publish(self._settings['updates_channel'], serialize.dumps({
-            'tid': self._transaction._tid,
-            'keys': self._keys_to_publish,
-            'push': push
-        }))
-
-        self._keys_to_publish = []
-        self._stored_objects = []
+        channel_utility.ignore_tid(tid)
+        await self._redis.publish(
+            self._settings['updates_channel'], serialize.dumps({
+                'tid': tid,
+                'keys': keys_to_publish,
+                'push': push
+            }))
