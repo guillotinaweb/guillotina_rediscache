@@ -1,7 +1,8 @@
 2.1.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Use expire param with setting redis cache value on file data manager
+  [vangheem]
 
 
 2.1.1 (2019-01-18)
